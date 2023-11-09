@@ -1,0 +1,32 @@
+---
+
+- name: Check Expiration Date and Renew if less than 30days
+  hosts: localhost
+    #connection: local
+  tasks:
+    - name: Get TLS Certificate notBefore and notAfter Dates
+      shell: >
+        echo | openssl s_client -connect hcqck1awvasd039:443 2>/dev/null | openssl x509 -noout -dates
+      register: openssl_output
+      ignore_errors: yes
+
+    - name: Print back TLS Certificate notBefore and notAfter Dates
+      debug:
+        var: openssl_output
+
+    - name: Extract notAfter Expiry Date
+      set_fact: 
+        expiration_date: "{{ openssl_output.stdout_lines[1] | regex_replace('notAfter=', '')  }}"
+
+    - name: Print back noAfter Expiry Date
+      debug: 
+        var: expiration_date
+
+    - name: Calculate days before Cert expires
+      set_fact: 
+        days_before_expiry: "{{ (expiration_date | to_datetime('%b %d  %H:%M:%S %Y GMT') - now() ).days }}"
+
+    - name: Print back days before expiry
+      debug:
+        msg: "There is {{ days_before_expiry}}days before Cert Expires !"
+
